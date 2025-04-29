@@ -13,7 +13,8 @@ def main():
         raise FileNotFoundError(f"WHO data file not found at: {who_data_file}")
     
     data = process_data(who_data_file)
-    create_dashboard(data)
+    app = create_dashboard(data)
+    app.run(debug = True)
 
 
 if __name__ == '__main__':
