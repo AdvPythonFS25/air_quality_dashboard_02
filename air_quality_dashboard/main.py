@@ -1,5 +1,5 @@
 from data_processing import process_data
-from air_quality_dashboard import create_dashboard
+from dashboard import create_dashboard
 
 from pathlib import Path
 
