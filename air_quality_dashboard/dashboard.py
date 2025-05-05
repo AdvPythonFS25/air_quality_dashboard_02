@@ -4,6 +4,10 @@ import plotly.express as px
 from dash import dcc, Input, Output
 
 
+PM2_5 = 'PM2.5 (µg/m³)'
+PM10 = 'PM10 (µg/m³)'
+NO2 = 'NO₂ (µg/m³)'
+
 def create_dashboard(data : pd.DataFrame) -> Dash:
     """
     Creates a dashboard app from the given data.
@@ -29,12 +33,12 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         dcc.Dropdown(
             id='pollutant-dropdown',
             options=[
-                {'label': 'PM2.5 (µg/m³)', 'value': 'PM2.5 (µg/m³)'},
-                {'label': 'PM10 (µg/m³)',  'value': 'PM10 (µg/m³)'},
-                {'label': 'NO₂ (µg/m³)',   'value': 'NO₂ (µg/m³)'}
+                {'label': PM2_5, 'value': PM2_5},
+                {'label': PM10,  'value': PM10},
+                {'label': NO2,   'value': NO2}
             ],
             multi=True,
-            value=['PM2.5 (µg/m³)'],  # default selection
+            value=[PM2_5],  # default selection
             placeholder="Select pollutants"
         ),
 
@@ -46,7 +50,6 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         html.Div('Raw data preview:'),
         dash_table.DataTable(data.to_dict('records'), page_size=10)
     ])
-
     @app.callback(
         Output('pm25-trend', 'figure'),
         Input('city-dropdown', 'value'),
@@ -61,18 +64,47 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
 
         # Create one plot with one trace per pollutant
         import plotly.graph_objects as go
+        import plotly.colors
+        
         fig = go.Figure()
+        
+        # Use a dictionary for consistent mapping of pollutants to line styles
+        dashes = {
+            PM2_5 : 'dot',
+            PM10  : 'dash',
+            NO2   : 'solid'
+        }
+        colors = plotly.colors.qualitative.Plotly
 
         for pollutant in selected_pollutants:
-            for city in selected_cities:
+            for city, color in zip(selected_cities, colors):
                 city_data = filtered_df[filtered_df['City'] == city]
                 fig.add_trace(go.Scatter(
                     x=city_data['Year'],
                     y=city_data[pollutant],
                     mode='lines+markers',
-                    name=f'{pollutant} - {city}'
+                    showlegend=False,
+                    line={'dash' : dashes[pollutant], 'color' : color}
                 ))
+        
+        # Add one trace per pollutant for legend (dash only)
+        for pollutant in selected_pollutants:
+            fig.add_trace(go.Scatter(
+                x=[None], y = [None], # Placeholder for legend
+                mode='lines',
+                name=f'Pollutant : {pollutant}',
+                line={'dash': dashes[pollutant], 'color': 'gray'},
+            ))
 
+        # Add one trace per city for legend (color only)
+        for city, color in zip(selected_cities, colors):
+            fig.add_trace(go.Scatter(
+                x=[None], y = [None], # Placeholder for legend
+                mode='lines',
+                name=f'City : {city}',
+                line={'dash': 'solid', 'color': color},
+            ))
+        
         fig.update_layout(
             title='Air Pollution Trends Over Time',
             xaxis_title='Year',
@@ -84,3 +116,4 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         return fig
 
     return app
+
