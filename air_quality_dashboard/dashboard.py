@@ -13,6 +13,7 @@ PM10 = 'PM10 (µg/m³)'
 NO2 = 'NO₂ (µg/m³)'
 
 
+
 def create_city_dropdown(data):
     cities = sorted(data['City'].unique())
     return dcc.Dropdown(
@@ -36,6 +37,17 @@ def create_pollutant_dropdown():
         placeholder="Select pollutants"
     )
 
+def create_time_range(min_year,max_year):
+    
+    return dcc.RangeSlider(
+        id='year-slider',
+        min=min_year,
+            max=max_year,
+            step=1,
+            value=[min_year, max_year],
+            marks={str(year): str(year) for year in range(min_year, max_year + 1, 5)}
+    )
+
 
 def create_dashboard(data : pd.DataFrame) -> Dash:
     """
@@ -50,6 +62,8 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         create_city_dropdown(data),
         html.Div('Select one or more pollutants to display:'),
         create_pollutant_dropdown(),
+        html.Div('Select a year-range to display:'),
+        create_time_range(data['Year'].min(), data['Year'].max()),
         dcc.Graph(id='pm25-trend'),
         html.Hr(),
         html.Div('Raw data preview:'),
@@ -59,13 +73,15 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
     @app.callback(
         dash.Output('pm25-trend', 'figure'),
         dash.Input('city-dropdown', 'value'),
-        dash.Input('pollutant-dropdown', 'value')
+        dash.Input('pollutant-dropdown', 'value'),
+        dash.Input('year-slider', 'value')
     )
-    def update_pollution_plot(selected_cities, selected_pollutants):
+    def update_pollution_plot(selected_cities, selected_pollutants, year_range):
         if not selected_cities or not selected_pollutants:
             return px.line(title="Please select at least one city and one pollutant")
-
-        filtered_df = data[data['City'].isin(selected_cities)]
+        
+        start_year, end_year = year_range
+        filtered_df = data[(data['City'].isin(selected_cities)) & (data['Year'] >= start_year) & (data['Year'] <= end_year)]
         fig = go.Figure()
 
         dashes = {
