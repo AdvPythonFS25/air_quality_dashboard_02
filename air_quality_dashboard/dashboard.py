@@ -66,12 +66,14 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         create_time_range(data['Year'].min(), data['Year'].max()),
         dcc.Graph(id='pm25-trend'),
         html.Hr(),
+        html.Div(id='max-values'),
+        html.Hr(),
         html.Div('Raw data preview:'),
         dash_table.DataTable(data.to_dict('records'), page_size=10)
     ])
 
     @app.callback(
-        dash.Output('pm25-trend', 'figure'),
+        [dash.Output('pm25-trend', 'figure'), dash.Output('max-values', 'children')],
         dash.Input('city-dropdown', 'value'),
         dash.Input('pollutant-dropdown', 'value'),
         dash.Input('year-slider', 'value')
@@ -82,6 +84,15 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         
         start_year, end_year = year_range
         filtered_df = data[(data['City'].isin(selected_cities)) & (data['Year'] >= start_year) & (data['Year'] <= end_year)]
+        
+        #calculate Max-Values in given City/Years
+        max_values = []
+        for pollutant in [PM2_5, PM10, NO2]:
+            max_val = filtered_df[pollutant].max()
+            max_values.append(f'Max {pollutant}: {max_val} µg/m³')
+        
+        
+        
         fig = go.Figure()
 
         dashes = {
@@ -127,6 +138,6 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
             transition_duration=500
         )
 
-        return fig
+        return fig,html.Div([html.P(val) for val in max_values])
 
     return app
