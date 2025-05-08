@@ -1,3 +1,6 @@
+"""
+Module for processing WHO air quality Excel data into a clean pandas DataFrame.
+"""
 from pathlib import Path
 import pandas as pd
 
@@ -9,25 +12,22 @@ def process_data(data : Path) -> pd.DataFrame:
 
     # Choses the relevant columns from the dataframe
     df = df[[
-        'country_name',
-        'city',
-        'year',
-        'pm10_concentration',
-        'pm25_concentration',
-        'no2_concentration',
-        'pm10_tempcov',
-        'pm25_tempcov',
-        'no2_tempcov',
-        'latitude',
-        'longitude'
-    ]]
+        'country_name', 'city',
+        'year', 'pm10_concentration',
+        'pm25_concentration', 'no2_concentration',
+        'pm10_tempcov', 'pm25_tempcov',
+        'no2_tempcov', 'latitude',
+        'longitude']
+    ]
 
     # Deletes the rows with missing core values
     df = df.dropna(subset=['country_name', 'city', 'year'])
 
     # Unify dataframe
     df['year'] = df['year'].astype(int)
-    for col in ['pm10_concentration', 'pm25_concentration', 'no2_concentration', 'pm10_tempcov', 'pm25_tempcov', 'no2_tempcov']:
+    for col in ['pm10_concentration', 'pm25_concentration',
+                'no2_concentration', 'pm10_tempcov',
+                'pm25_tempcov', 'no2_tempcov']:
         df[col] = pd.to_numeric(df[col], errors='coerce')
 
     # Renaming colums
@@ -44,5 +44,4 @@ def process_data(data : Path) -> pd.DataFrame:
         'latitude': 'Latitude',
         'longitude': 'Longitude'
     })
-    
     return df

@@ -1,3 +1,123 @@
+# Code Formatting & Linting Report (Pylint Fixes)
+
+## The original `pylint` output (before fixing any issues)
+
+### `main.py`
+- `[missing-module-docstring]` Missing module docstring
+
+### `data_processing.py`
+- `[line-too-long]` Line too long (128/100)
+- `[trailing-whitespace]` Trailing whitespace
+- `[missing-final-newline]` Final newline missing
+- `[missing-module-docstring]` Missing module docstring
+
+### `dashboard.py`
+- `[missing-module-docstring]` Missing module docstring
+- `[ungrouped-imports]` Imports from package `dash` are not grouped
+- `[ungrouped-imports]` Imports from package `plotly` are not grouped
+
+---
+
+## Fixes applied
+
+-  **Added module-level docstrings** in all files
+-  **Grouped related imports** from the same package (especially `dash` and `plotly`)
+-  **Wrapped long lines** to comply with 100-character line length limit
+-  **Removed trailing whitespace**
+-  **Added a final newline** to `data_processing.py`
+-  **Reformatted multi-line lists** for readability
+
+---
+
+## Updated Code Versions (after fixing issues)
+
+### `main.py`
+
+```python
+"""
+Main entry point for the Air Quality Dashboard application.
+
+This script loads and processes air quality data from the WHO dataset,
+initializes the Dash dashboard, and starts the web application server.
+"""
+from pathlib import Path
+from data_processing import process_data
+from dashboard import create_dashboard
+
+def main():
+    """
+    Loads the WHO air quality Excel file, processes the data, and launches the Dash dashboard.
+
+    Raises:
+        FileNotFoundError: If the WHO data file is not found in the expected directory.
+    """
+    main_dir = Path(__file__).resolve().parent.parent
+    who_data_file = main_dir / 'data' / 'who_ambient_air_quality_database_version_2024_(v6.1).xlsx'
+    if not who_data_file.exists():
+        raise FileNotFoundError(f"WHO data file not found at: {who_data_file}")
+    data = process_data(who_data_file)
+    app = create_dashboard(data)
+    app.run(debug=True)
+
+if __name__ == '__main__':
+    main()
+```
+
+### `data_processing.py`
+
+```python
+"""
+Module for processing WHO air quality Excel data into a clean pandas DataFrame.
+"""
+from pathlib import Path
+import pandas as pd
+
+def process_data(data : Path) -> pd.DataFrame:
+    """
+    Reads the WHO air quality data from an Excel file and processes it into a DataFrame.
+    """
+    df = pd.read_excel(data, sheet_name='Update 2024 (V6.1)')
+
+    # Choses the relevant columns from the dataframe
+    df = df[[
+        'country_name', 'city',
+        'year', 'pm10_concentration',
+        'pm25_concentration', 'no2_concentration',
+        'pm10_tempcov', 'pm25_tempcov',
+        'no2_tempcov', 'latitude',
+        'longitude']
+    ]
+
+    # Deletes the rows with missing core values
+    df = df.dropna(subset=['country_name', 'city', 'year'])
+
+    # Unify dataframe
+    df['year'] = df['year'].astype(int)
+    for col in ['pm10_concentration', 'pm25_concentration',
+                'no2_concentration', 'pm10_tempcov',
+                'pm25_tempcov', 'no2_tempcov']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    # Renaming colums
+    df = df.rename(columns={
+        'country_name': 'Country',
+        'city': 'City',
+        'year': 'Year',
+        'pm10_concentration': 'PM10 (µg/m³)',
+        'pm25_concentration': 'PM2.5 (µg/m³)',
+        'no2_concentration': 'NO₂ (µg/m³)',
+        'pm10_tempcov': 'PM10 Coverage (%)',
+        'pm25_tempcov': 'PM2.5 Coverage (%)',
+        'no2_tempcov': 'NO₂ Coverage (%)',
+        'latitude': 'Latitude',
+        'longitude': 'Longitude'
+    })
+    return df
+
+```
+### `dashboard.py`
+
+```python
 """
 This module creates a Dash-based dashboard for visualizing air quality data.
 """
@@ -111,3 +231,4 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         )
         return fig
     return app
+```
