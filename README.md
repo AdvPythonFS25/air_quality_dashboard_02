@@ -54,6 +54,11 @@ project/
 - Coordinates data loading and dashboard creation.
 
 ---
+## Week 10: Second Deliverable
+### Refactor the prototyp:
+- Improved readability by using color and linestile to indicate pollutant and country (`data_processing.py`)
+- TODO.. (maybe more) 
+---
 # Dependencies
 Currently listed in requirements.txt.
 You can simply load them with:
