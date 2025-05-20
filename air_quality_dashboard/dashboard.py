@@ -35,9 +35,27 @@ def create_pollutant_dropdown():
         placeholder="Select pollutants"
     )
 
+def create_country_dropdown(data):
+    countries = sorted(data['Country'].unique())
+    return dcc.Dropdown(
+        id = 'country-dropdown',
+        options=[{'label': c, 'value': c} for c in countries],
+        placeholder="Select Country:"
+    )
+
 def create_time_range(min_year,max_year):
     return dcc.RangeSlider(
         id='year-slider',
+        min=min_year,
+            max=max_year,
+            step=1,
+            value=[min_year, max_year],
+            marks={str(year): str(year) for year in range(min_year, max_year + 1, 5)}
+    )
+
+def create_time_range_forMax(min_year,max_year):
+    return dcc.RangeSlider(
+        id='year-slider_max',
         min=min_year,
             max=max_year,
             step=1,
@@ -93,17 +111,23 @@ def update_pollution_plot(filtered_df : pd.DataFrame, selected_pollutants, selec
     )
     return fig
 
-def update_max_val_div(filtered_df : pd.DataFrame, selected_pollutants):
-    #calculate Max-Values in given City/Years
+def update_max_val_div(filtered_df : pd.DataFrame, selected_pollutants, selected_country, year_range_max):
+    #calculate Max-Values in given Country/Years
     max_value_descriptions = []
+    start_year, end_year = year_range_max
+    country_filtered_df = filtered_df[
+        (filtered_df['Country'] == selected_country) &
+        (filtered_df['Year'] >= start_year) &
+        (filtered_df['Year'] <= end_year)
+    ]
     for pollutant in selected_pollutants:
-        if filtered_df[pollutant].isna().all():
+        if country_filtered_df[pollutant].isna().all():
             max_value_descriptions.append(f'No data available for {pollutant} in the selected filters')
         else:
-            max_val = filtered_df[pollutant].max()
-            max_city = filtered_df['City'][filtered_df[pollutant].idxmax()]
+            max_val = country_filtered_df[pollutant].max()
+            #max_city = country_filtered_df['City'][filtered_df[pollutant].idxmax()]
             max_year = filtered_df['Year'][filtered_df[pollutant].idxmax()]
-            max_value_descriptions.append(f'Max {pollutant}: {max_val} µg/m³ in {max_city} ({max_year})')
+            max_value_descriptions.append(f'Max {pollutant}: {max_val} µg/m³ in ({max_year})')
     
     if not max_value_descriptions:
         return html.Div("No data available for the selected filters")
@@ -126,6 +150,10 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         create_time_range(data['Year'].min(), data['Year'].max()),
         dcc.Graph(id='pm25-trend'),
         html.Hr(),
+        html.Div('Select a country for which to display the max-values'),
+        create_country_dropdown(data),
+        html.Div('Select years for Max Values: '),
+        create_time_range_forMax(data['Year'].min(), data['Year'].max()),
         html.Div(id='max-values'),
         html.Hr(),
         html.Div('Raw data preview:'),
@@ -136,9 +164,11 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         [dash.Output('pm25-trend', 'figure'), dash.Output('max-values', 'children')],
         dash.Input('city-dropdown', 'value'),
         dash.Input('pollutant-dropdown', 'value'),
-        dash.Input('year-slider', 'value')
+        dash.Input('year-slider', 'value'),
+        dash.Input('year-slider_max', 'value'),
+        dash.Input('country-dropdown', 'value')
     )
-    def update_filters(selected_cities, selected_pollutants, year_range):
+    def update_filters(selected_cities, selected_pollutants, year_range,year_range_max, selected_country):
         """
         Update the graph and max value display based on selected filters.
         """
@@ -146,8 +176,10 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         start_year, end_year = year_range
         filtered_df = data[(data['City'].isin(selected_cities)) & (data['Year'] >= start_year) & (data['Year'] <= end_year)]
 
+        country_filtered_df = data[data['Country']==(selected_country)]
+        
         fig = update_pollution_plot(filtered_df, selected_pollutants, selected_cities)
-        max_val_div = update_max_val_div(filtered_df, selected_pollutants)
+        max_val_div = update_max_val_div(country_filtered_df, selected_pollutants, selected_country, year_range_max)
 
         return fig, max_val_div
     
