@@ -133,6 +133,43 @@ def update_max_val_div(filtered_df : pd.DataFrame, selected_pollutants, selected
         return html.Div("No data available for the selected filters")
     return html.Div([html.P(val) for val in max_value_descriptions]) 
 
+
+def update_country_pollution_plot(filtered_df: pd.DataFrame, selected_pollutants, selected_country, year_range):
+    if not selected_country or not selected_pollutants:
+        return px.line(title="Please select a country and pollutants")
+
+    fig = go.Figure()
+    dashes = {
+        PM2_5: 'dot',
+        PM10: 'dash',
+        NO2: 'solid'
+    }
+
+    colors = plotly.colors.qualitative.Plotly
+    start_year, end_year = year_range
+    country_df = filtered_df[(filtered_df['Country'] == selected_country) & (filtered_df['Year'] >= start_year) & (filtered_df['Year'] <= end_year)]
+
+    # Durchschnitt je Jahr berechnen
+    avg_df = country_df.groupby('Year')[selected_pollutants].mean().reset_index()
+
+    for pollutant, color in zip(selected_pollutants, colors):
+        fig.add_trace(go.Scatter(
+            x=avg_df['Year'],
+            y=avg_df[pollutant],
+            mode='lines+markers',
+            name=pollutant,
+            line={'dash': dashes[pollutant], 'color': color}
+        ))
+
+    fig.update_layout(
+        title=f'Average Air Pollution in {selected_country}',
+        xaxis_title='Year',
+        yaxis_title='Average Concentration (µg/m³)',
+        legend_title='Pollutants',
+        transition_duration=500
+    )
+    return fig
+
 def create_dashboard(data : pd.DataFrame) -> Dash:
     """
     Creates a dashboard app from the given data.
@@ -154,6 +191,7 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         create_country_dropdown(data),
         html.Div('Select years for Max Values: '),
         create_time_range_forMax(data['Year'].min(), data['Year'].max()),
+        dcc.Graph(id='country-trend'),
         html.Div(id='max-values'),
         html.Hr(),
         html.Div('Raw data preview:'),
@@ -161,7 +199,7 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
     ])
 
     @app.callback(
-        [dash.Output('pm25-trend', 'figure'), dash.Output('max-values', 'children')],
+        [dash.Output('pm25-trend', 'figure'), dash.Output('max-values', 'children'),dash.Output('country-trend', 'figure')],
         dash.Input('city-dropdown', 'value'),
         dash.Input('pollutant-dropdown', 'value'),
         dash.Input('year-slider', 'value'),
@@ -180,7 +218,8 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
         
         fig = update_pollution_plot(filtered_df, selected_pollutants, selected_cities)
         max_val_div = update_max_val_div(country_filtered_df, selected_pollutants, selected_country, year_range_max)
+        country_fig = update_country_pollution_plot(data, selected_pollutants, selected_country, year_range_max)
 
-        return fig, max_val_div
+        return fig, max_val_div, country_fig
     
     return app
