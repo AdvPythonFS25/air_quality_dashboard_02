@@ -179,7 +179,7 @@ def create_dashboard(data : pd.DataFrame) -> Dash:
     app = Dash()
     app.layout = html.Div([
         html.H1('Air Quality Dashboard'),
-        html.Div('Select one or more countries to see PM2.5 trends over time:'),
+        html.Div('Select one or more cities to see PM2.5 trends over time:'),
         create_city_dropdown(data),
         html.Div('Select one or more pollutants to display:'),
         create_pollutant_dropdown(),
